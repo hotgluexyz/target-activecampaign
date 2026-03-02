@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import backoff
 import requests
-from singer_sdk.exceptions import RetriableAPIError
 
-from target_hotglue.client import HotglueSink
+from hotglue_singer_sdk.exceptions import RetriableAPIError
+from hotglue_singer_sdk.target_sdk.client import HotglueSink
 
 
 class ActiveCampaignSink(HotglueSink):
