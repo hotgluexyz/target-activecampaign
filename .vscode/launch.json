@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "target-activecampaign",
+            "type": "python",
+            "request": "launch",
+            "program": "../target_activecampaign/target.py",
+            "cwd": "/Users/hassansyyid/Workspace/targets/target-activecampaign/.secrets",
+            "args": [
+                "<",
+                "data.singer",
+                "--config",
+                "config.json",
+                ">",
+                "target_state.json"
+            ],
+            "python": "/Users/hassansyyid/Workspace/targets/target-activecampaign/.venv/bin/python3",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+
+    ]
+}
