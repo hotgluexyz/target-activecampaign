@@ -92,11 +92,11 @@ class ContactsSink(ActiveCampaignSink):
                 "POST", endpoint=self.endpoint, request_data={"contact": contact}
             )
 
-        is_updated = contact_id is not None
+        state_updates = {"is_updated": True} if contact_id else dict()
         contact_id = response.json()["contact"]["id"]
         self.sync_list_status(contact_id, record.get("status"))
 
-        return contact_id, response.ok, {"is_updated": is_updated}
+        return contact_id, response.ok, state_updates
 
     def get_contact_id(self, email: Optional[str]) -> Optional[str]:
         """Look up an existing contact by email address."""
