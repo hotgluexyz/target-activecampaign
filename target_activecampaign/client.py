@@ -10,9 +10,31 @@ from hotglue_singer_sdk.target_sdk.client import HotglueSink
 
 
 class ActiveCampaignSink(HotglueSink):
-    """ActiveCampaign target sink class."""
+    """Base sink for the ActiveCampaign v3 REST API."""
+
+    # Streams this sink accepts, in addition to `name`.
+    available_names: list[str] = []
+
+    @property
+    def base_url(self) -> str:
+        api_url = (self.config.get("api_url") or "").rstrip("/")
+        api_version = self.config.get("api_version") or 3
+        return f"{api_url}/api/{api_version}"
+
+    @property
+    def http_headers(self) -> dict:
+        return {"Api-Token": self.config.get("api_token")}
+
+
+class ActiveCampaignTrackingSink(ActiveCampaignSink):
+    """Base sink for the ActiveCampaign event tracking API.
+
+    Unlike the REST API this host is unauthenticated, shared across accounts and
+    expects form encoded bodies rather than JSON.
+    """
 
     base_url = "https://trackcmp.net"
+    http_headers: dict = {}
 
     @backoff.on_exception(
         backoff.expo,
