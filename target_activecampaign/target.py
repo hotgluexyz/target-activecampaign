@@ -23,8 +23,8 @@ class TargetActiveCampaign(TargetHotglue):
     MAX_PARALLELISM = 1
 
     config_jsonschema = th.PropertiesList(
-        th.Property("account_id", th.StringType, required=True),
-        th.Property("event_key", th.StringType, required=True),
+        th.Property("account_id", th.StringType),
+        th.Property("event_key", th.StringType),
         th.Property("api_url", th.StringType, required=True),
         th.Property("api_token", th.StringType, required=True),
         th.Property("api_version", th.StringType, default="3"),

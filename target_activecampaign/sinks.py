@@ -49,7 +49,7 @@ class EventsSink(ActiveCampaignTrackingSink):
 class ContactsSink(ActiveCampaignSink):
     """Upsert contacts and keep their list subscription in sync."""
 
-    endpoint = "/contacts"
+    endpoint = "/contact/sync"
     name = "contacts"
     available_names = ["contacts", "contact", "customer", "customers"]
 
@@ -78,35 +78,11 @@ class ContactsSink(ActiveCampaignSink):
         return payload
 
     def upsert_record(self, record: dict, context: dict):
-        contact = record["contact"]
-        contact_id = contact.pop("id", None) or self.get_contact_id(contact.get("email"))
-
-        if contact_id:
-            response = self.request_api(
-                "PUT",
-                endpoint=f"{self.endpoint}/{contact_id}",
-                request_data={"contact": contact},
-            )
-        else:
-            response = self.request_api(
-                "POST", endpoint=self.endpoint, request_data={"contact": contact}
-            )
-
-        state_updates = {"is_updated": True} if contact_id else dict()
+        response = self.request_api("POST", endpoint=self.endpoint, request_data=record)
         contact_id = response.json()["contact"]["id"]
         self.sync_list_status(contact_id, record.get("status"))
 
-        return contact_id, response.ok, state_updates
-
-    def get_contact_id(self, email: Optional[str]) -> Optional[str]:
-        """Look up an existing contact by email address."""
-        if not email:
-            return None
-
-        response = self.request_api("GET", endpoint=self.endpoint, params={"email": email})
-        contacts = response.json().get("contacts") or []
-
-        return contacts[0]["id"] if contacts else None
+        return contact_id, response.ok, dict()
 
     def sync_list_status(self, contact_id: str, status: Optional[int]) -> None:
         """Subscribe or unsubscribe the contact from the configured list."""
