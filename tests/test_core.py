@@ -1,39 +1,75 @@
-"""Tests standard target features using the built-in SDK tests library."""
+"""Tests for ActiveCampaign stream sinks."""
 
-from __future__ import annotations
+from unittest.mock import Mock, call
 
-import typing as t
-
-import pytest
-from singer_sdk.testing import get_target_test_class
-
-from target_activecampaign.target import TargetActiveCampaign
-
-# TODO: Initialize minimal target config
-SAMPLE_CONFIG: dict[str, t.Any] = {}
+from target_activecampaign.sinks import ContactsSink
 
 
-# Run standard built-in target tests from the SDK:
-StandardTargetTests = get_target_test_class(
-    target_class=TargetActiveCampaign,
-    config=SAMPLE_CONFIG,
-)
+def contacts_sink(config=None):
+    """Create a sink without a target runner for isolated sink tests."""
+    sink = object.__new__(ContactsSink)
+    sink._config = config or {
+        "api_url": "https://example.api-us1.com/api/3",
+        "api_token": "token",
+        "list_id": "7",
+    }
+    return sink
 
 
-class TestTargetActiveCampaign(StandardTargetTests):  # type: ignore[misc, valid-type]  # noqa: E501
-    """Standard Target Tests."""
+def test_contacts_preprocesses_an_etl_contact():
+    result = contacts_sink().preprocess_record(
+        {
+            "externalId": "42",
+            "email": "ada@example.org",
+            "firstName": "Ada",
+            "lastName": "Lovelace",
+            "opt_in": True,
+        },
+        {},
+    )
 
-    @pytest.fixture(scope="class")
-    def resource(self):  # noqa: ANN201
-        """Generic external resource.
-
-        This fixture is useful for setup and teardown of external resources,
-        such output folders, tables, buckets etc. for use during testing.
-
-        Example usage can be found in the SDK samples test suite:
-        https://github.com/meltano/sdk/tree/main/tests/samples
-        """
-        return "resource"
+    assert result == {
+        "contact": {
+            "email": "ada@example.org",
+            "firstName": "Ada",
+            "lastName": "Lovelace",
+        },
+        "opt_in": True,
+    }
 
 
-# TODO: Create additional tests as appropriate for your target.
+def test_contacts_upsert_sets_the_contact_list_status():
+    sink = contacts_sink()
+    contact_response = Mock(ok=True)
+    contact_response.json.return_value = {"contact": {"id": "99"}}
+    list_response = Mock(ok=True)
+    sink.request_api = Mock(side_effect=[contact_response, list_response])
+
+    result = sink.upsert_record(
+        {
+            "contact": {"email": "ada@example.org"},
+            "opt_in": False,
+        },
+        {},
+    )
+
+    assert result == ("99", True, {})
+    assert sink.request_api.call_args_list == [
+        call("POST", endpoint="/contact/sync", request_data={"email": "ada@example.org"}),
+        call(
+            "POST",
+            endpoint="/contactLists",
+            request_data={"contactList": {"contact": "99", "list": "7", "status": 2}},
+        ),
+    ]
+
+
+def test_contacts_skip_list_update_when_not_configured():
+    sink = contacts_sink({"api_url": "https://example.api-us1.com/api/3", "api_token": "token"})
+    contact_response = Mock(ok=True)
+    contact_response.json.return_value = {"contact": {"id": "99"}}
+    sink.request_api = Mock(return_value=contact_response)
+
+    sink.upsert_record({"contact": {"email": "ada@example.org"}, "opt_in": True}, {})
+
+    assert sink.request_api.call_count == 1
